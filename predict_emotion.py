@@ -364,21 +364,23 @@ def main():
     emotion_result, emotion_error = predict_emotion(image_path)
     
     # Build final result
-    if age_error and emotion_error:
-        final_result = {
-            "error": "Both age and emotion detection failed",
-            "age_error": age_error,
-            "emotion_error": emotion_error,
-            "status": "error"
-        }
-    elif emotion_error:
-        final_result = {
-            "error": "Emotion detection failed",
-            "emotion_error": emotion_error,
-            "age_result": age_result,
-            "status": "error"
-        }
-    elif age_error:
+if age_error and emotion_error:
+    final_result = {
+        "error": "Both age and emotion detection failed",
+        "age_error": age_error,
+        "emotion_error": emotion_error,
+        "status": "error"
+    }
+
+elif emotion_error:
+    final_result = {
+        "error": "Emotion detection failed",
+        "emotion_error": emotion_error,
+        "age_result": age_result,
+        "status": "error"
+    }
+
+elif age_error:
     final_result = {
         "error": "Age detection failed",
         "age_error": age_error,
@@ -387,26 +389,31 @@ def main():
         "status": "error"
     }
 
-    else:
-        # Both predictions successful
-        is_child = age_result["is_child"]
-        recommendations = get_music_recommendations(emotion_result["emotion"], is_child, limit=10)
-        
-        final_result = {
-            "age_category": age_result["age_category"],
-            "age_confidence": age_result["confidence"],
-            "emotion": emotion_result["emotion"],
-            "emotion_confidence": emotion_result["confidence"],
-            "all_emotion_probabilities": emotion_result["all_probabilities"],
-            "is_child": is_child,
-            "music_recommendations": recommendations,
-            "status": "success"
-        }
-    
+else:
+    # Both predictions successful
+    is_child = age_result["is_child"]
+    recommendations = get_music_recommendations(
+        emotion_result["emotion"],
+        is_child,
+        limit=10
+    )
+
+    final_result = {
+        "age_category": age_result["age_category"],
+        "age_confidence": age_result["confidence"],
+        "emotion": emotion_result["emotion"],
+        "emotion_confidence": emotion_result["confidence"],
+        "all_emotion_probabilities": emotion_result["all_probabilities"],
+        "is_child": is_child,
+        "music_recommendations": recommendations,
+        "status": "success"
+    }
+
     # Output JSON result
     print(json.dumps(final_result))
 
 if __name__ == "__main__":
 
     main()
+
 
