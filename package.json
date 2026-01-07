@@ -1,4 +1,4 @@
-{{
+{
   "name": "emotion-detection-api",
   "version": "1.0.0",
   "description": "TFLite Emotion Detection API for Flutter App",
@@ -16,5 +16,3 @@
     "node": ">=18.0.0"
   }
 }
-
-
