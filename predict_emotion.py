@@ -53,54 +53,76 @@ def predict_age(image_path, age_model_path='child_adult_model.tflite'):
     """Predict if the person is a child or adult"""
     try:
         print("Starting age prediction...")
-        
+        print("Age model path:", age_model_path)
+
         # Load image
         img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
         if img is None:
             return None, "Could not load image for age detection"
-        
-        # Preprocess image
-        img_resized = cv2.resize(img, (48, 48))
-        img_processed = img_resized.reshape(1, 48, 48, 1).astype('float32') / 255.0
-        
+
+        # ---- FACE DETECTION (FIX 4) ----
+        face_cascade = cv2.CascadeClassifier(
+            cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        )
+
+        faces = face_cascade.detectMultiScale(img, scaleFactor=1.3, minNeighbors=5)
+
+        if len(faces) == 0:
+            return None, "No face detected for age prediction"
+
+        x, y, w, h = faces[0]
+        face = img[y:y+h, x:x+w]
+        face = cv2.resize(face, (48, 48))
+
+        img_processed = face.reshape(1, 48, 48, 1).astype('float32') / 255.0
+
         # Load age model
         model_data, error = load_tflite_model(age_model_path)
         if error:
             return None, error
-        
+
         interpreter = model_data['interpreter']
         input_details = model_data['input_details']
         output_details = model_data['output_details']
-        
-        print("Age model loaded successfully")
-        
+
+        print("Age model input shape expected:", input_details[0]['shape'])
+        print("Age model output details:", output_details)
+
         # Run inference
         interpreter.set_tensor(input_details[0]['index'], img_processed)
         interpreter.invoke()
-        output = interpreter.get_tensor(output_details[0]['index'])[0]
-        
-        print(f"Age prediction raw output: {output}")
-        
-        # Get prediction
-        pred_index = np.argmax(output)
-        age_category = age_map.get(pred_index, "Unknown")
-        confidence = float(output[pred_index])
-        
-        print(f"Predicted age category: {age_category} (confidence: {confidence:.4f})")
-        
-        result = {
+        output = interpreter.get_tensor(output_details[0]['index'])
+
+        print("Age model raw output:", output)
+        print("Age model output shape:", output.shape)
+
+        # ---- FIX 3: HANDLE OUTPUT PROPERLY ----
+        if output.shape[-1] == 1:
+            # Sigmoid output
+            confidence = float(output[0][0])
+            is_child = confidence < 0.5
+            age_category = "Child" if is_child else "Adult"
+        else:
+            # Softmax output
+            probs = output[0]
+            pred_index = int(np.argmax(probs))
+            confidence = float(probs[pred_index])
+            age_category = age_map.get(pred_index, "Unknown")
+            is_child = age_category == "Child"
+
+        print(f"Predicted age: {age_category} (confidence: {confidence:.4f})")
+
+        return {
             "age_category": age_category,
             "confidence": confidence,
-            "predicted_index": int(pred_index),
-            "is_child": age_category == "Child"
-        }
-        
-        return result, None
-        
+            "is_child": is_child
+        }, None
+
     except Exception as e:
         error_msg = f"Age prediction error: {str(e)}"
-        print(f"ERROR: {error_msg}")
+        print("ERROR:", error_msg)
         return None, error_msg
+
 
 def predict_emotion(image_path, emotion_model_path='emotion_model.tflite'):
     """Predict emotion from image"""
@@ -357,21 +379,14 @@ def main():
             "status": "error"
         }
     elif age_error:
-        # Age detection failed, but emotion succeeded - use adult songs as default
-        print("Warning: Age detection failed, defaulting to adult recommendations")
-        is_child = False
-        recommendations = get_music_recommendations(emotion_result["emotion"], is_child, limit=10)
-        
-        final_result = {
-            "age_category": "Adult (default)",
-            "age_detection_error": age_error,
-            "emotion": emotion_result["emotion"],
-            "emotion_confidence": emotion_result["confidence"],
-            "all_emotion_probabilities": emotion_result["all_probabilities"],
-            "is_child": is_child,
-            "music_recommendations": recommendations,
-            "status": "partial_success"
-        }
+    final_result = {
+        "error": "Age detection failed",
+        "age_error": age_error,
+        "emotion": emotion_result["emotion"],
+        "emotion_confidence": emotion_result["confidence"],
+        "status": "error"
+    }
+
     else:
         # Both predictions successful
         is_child = age_result["is_child"]
@@ -394,3 +409,4 @@ def main():
 if __name__ == "__main__":
 
     main()
+
