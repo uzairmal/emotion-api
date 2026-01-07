@@ -68,7 +68,8 @@ app.post('/predict-with-recommendations', upload.single('image'), async (req, re
         console.log('💾 Image saved to temp file:', tempImagePath);
 
         // Call predict_emotion.py which handles BOTH emotion and age
-        const pythonProcess = spawn('python', ['predict_emotion.py', tempImagePath]);
+        const pythonProcess = spawn('python3', ['predict_emotion.py', tempImagePath]);
+
 
         let resultData = '';
         let errorData = '';
@@ -363,4 +364,5 @@ app.listen(PORT, () => {
         fs.mkdirSync(tempDir);
         console.log('📁 Created temp directory');
     }
+
 });
