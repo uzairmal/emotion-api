@@ -2,7 +2,8 @@ import sys
 import json
 import numpy as np
 import cv2
-from tensorflow.lite.python.interpreter import Interpreter
+import tensorflow as tf
+Interpreter = tf.lite.Interpreter
 import os
 import requests
 
@@ -48,7 +49,7 @@ def load_tflite_model(model_path):
     except Exception as e:
         return None, f"Failed to load model: {str(e)}"
 
-def predict_age(image_path, age_model_path='age_model.tflite'):
+def predict_age(image_path, age_model_path='child_adult_model.tflite'):
     """Predict if the person is a child or adult"""
     try:
         print("Starting age prediction...")
@@ -391,4 +392,5 @@ def main():
     print(json.dumps(final_result))
 
 if __name__ == "__main__":
+
     main()
